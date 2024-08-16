@@ -67,6 +67,94 @@ func (m *Machine) Init(rom_path string) {
 	m.PC = 0x200
 	m.SP = 0x0
 	fmt.Printf("%d bytes read\n", n)
+
+	digits := []uint8 {
+		0xF0,
+        0x90,
+        0x90,
+        0x90,
+        0xF0,
+        0x20,
+        0x60,
+        0x20,
+        0x20,
+        0x70,
+        0xF0,
+        0x10,
+        0xF0,
+        0x80,
+        0xF0,
+        0xF0,
+        0x10,
+        0xF0,
+        0x10,
+        0xF0,
+        0x90,
+        0x90,
+        0xF0,
+        0x10,
+        0x10,
+        0xF0,
+        0x80,
+        0xF0,
+        0x10,
+        0xF0,
+        0xF0,
+        0x80,
+        0xF0,
+        0x90,
+        0xF0,
+        0xF0,
+        0x10,
+        0x20,
+        0x40,
+        0x40,
+        0xF0,
+        0x90,
+        0xF0,
+        0x90,
+        0xF0,
+        0xF0,
+        0x90,
+        0xF0,
+        0x10,
+        0xF0,
+        0xF0,
+        0x90,
+        0xF0,
+        0x90,
+        0x90,
+        0xE0,
+        0x90,
+        0xE0,
+        0x90,
+        0xE0,
+        0xF0,
+        0x80,
+        0x80,
+        0x80,
+        0xF0,
+        0xE0,
+        0x90,
+        0x90,
+        0x90,
+        0xE0,
+        0xF0,
+        0x80,
+        0xF0,
+        0x80,
+        0xF0,
+        0xF0,
+        0x80,
+        0xF0,
+        0x80,
+        0x80,
+	
+	}
+
+	for i := range digits {
+        m.Mem[i] = digits[i]
+	}
 }
 
 func (m *Machine) clearDisplay() {
@@ -84,6 +172,10 @@ func (m *Machine) drawSprite(vx uint8, vy uint8, n uint8) {
 	var i uint8
 	var j uint8
 	for i = 0; i < n; i++ {
+		if y + i > 31 {
+			// below screen
+			continue
+		}
 		line := m.Mem[start + uint16(i)]
 
 		for j = 0; j < 8; j++ {
@@ -173,10 +265,12 @@ func (m *Machine) Clocktick() error {
 		val <<= 8
 		val |= uint16(instr2)
 		m.I = val //+ 0x200
+	
+	case (instr1 >> 4 == 0xF) && (instr2 == 0x29):
+		fmt.Println("Load digit sprite")
+		reg := instr1 & 0xF
+		m.I = uint16(m.Reg_V[reg]) * 5
 		
-		// fmt.Printf("Load index instr1: %x, instr2: %x, val: %x\n", 
-			// instr1, instr2, m.I)
-
 	/*
 		Store instructions
 	*/
@@ -346,6 +440,12 @@ func (m *Machine) Clocktick() error {
 	case instr1 == 0 && instr2 == 0xE0:
 		fmt.Println("Clear screen instruction")
 		m.clearDisplay()
+
+	case instr1 >> 4 == 0xC:
+		fmt.Println("Get Random byte instruction")
+		vx := instr1 & 0xF
+		n := instr2
+		m.Reg_V[vx] = 0x4F & n
 
 	case instr1 >> 4 == 0xD:
 		fmt.Println("Draw sprite instruction")
