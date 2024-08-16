@@ -3,7 +3,7 @@ package main
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	// "math/rand"
-	// "os"
+	"os"
 	// "fmt"
 	"time"
 )
@@ -17,7 +17,11 @@ func check(e error) {
 func main() {
 
 	machine := Machine{}
-	machine.Init("../chip8-test-suite/bin/1-chip8-logo.ch8")
+	// machine.Init("../chip8-test-suite/bin/1-chip8-logo.ch8")
+	// machine.Init("../chip8-test-suite/bin/2-ibm-logo.ch8")
+	rom_file := os.Args[1]
+	machine.Init(rom_file)
+	
 	defer machine.Deinit()
 
 	DisplayInit()
@@ -27,7 +31,7 @@ func main() {
 		err := machine.Clocktick()
 		check(err)
 		DisplayUpdate(machine.DisplayBuf)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 
 	// var instr [2]byte

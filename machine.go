@@ -116,6 +116,12 @@ func (m *Machine) Clocktick() error {
 		// fmt.Printf("Jmp address: %x:%x => %04x\n", addr2, instr2, addr)
 		m.PC = addr
 		return nil
+
+	case instr1 >> 4 == 0x7:
+		reg := instr1 & 0xF
+		val := instr2
+		m.Reg_V[reg] += val
+		fmt.Println("Add immediate instruction")
 	default:
 		fmt.Println("Unknown instruction")
 		return errors.New("Unknown instruction")
