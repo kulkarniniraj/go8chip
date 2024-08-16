@@ -27,6 +27,8 @@ func main() {
 	DisplayInit()
 	defer DisplayDeinit()
 
+	timer_count := time.Now()
+
 	for !rl.WindowShouldClose() {
 		err := machine.Clocktick()
 		// check(err)
@@ -36,6 +38,12 @@ func main() {
 		}
 		DisplayUpdate(machine.DisplayBuf)
 		time.Sleep(2 * time.Millisecond)
+
+		cur_time := time.Now()
+		if cur_time.Sub(timer_count).Milliseconds() >= (1000/60){
+			machine.TimerUpdate()
+			timer_count = time.Now()
+		}
 	}
 
 	// var instr [2]byte

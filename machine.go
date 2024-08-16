@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"errors"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type Machine struct {
@@ -14,6 +15,46 @@ type Machine struct {
 	Stack [16]uint16
 	SP uint8
 	PC uint16
+	DT uint8
+	ST uint8
+}
+
+var KeyMap = map[uint8]int32 {
+	0: rl.KeyKp0,
+	1: rl.KeyKp1,
+	2: rl.KeyKp2,
+	3: rl.KeyKp3,
+	4: rl.KeyKp4,
+	5: rl.KeyKp5,
+	6: rl.KeyKp6,
+	7: rl.KeyKp7,
+	8: rl.KeyKp8,
+	9: rl.KeyKp9,
+	0xA: rl.KeyZ,
+	0xB: rl.KeyX,
+	0xC: rl.KeyC,
+	0xD: rl.KeyV,
+	0xE: rl.KeyB,
+	0xF: rl.KeyN,
+}
+
+var RKeyMap = map[int32]uint8 {
+	rl.KeyKp0: 0,   
+	rl.KeyKp1: 1,   
+	rl.KeyKp2: 2,   
+	rl.KeyKp3: 3,   
+	rl.KeyKp4: 4,   
+	rl.KeyKp5: 5,   
+	rl.KeyKp6: 6,   
+	rl.KeyKp7: 7,   
+	rl.KeyKp8: 8,   
+	rl.KeyKp9: 9,   
+	rl.KeyZ: 0xA,   
+	rl.KeyX: 0xB,   
+	rl.KeyC: 0xC,   
+	rl.KeyV: 0xD,   
+	rl.KeyB: 0xE,   
+	rl.KeyN: 0xF,   
 }
 
 func (m *Machine) Init(rom_path string) {
@@ -97,6 +138,16 @@ func (m *Machine) drawSprite(vx uint8, vy uint8, n uint8) {
 	// 	fmt.Printf("\n")
 	// }
 			
+}
+
+func (m *Machine) TimerUpdate() {
+	if m.DT > 0 {
+		m.DT--
+	}
+
+	if m.ST > 0 {
+		m.ST--
+	}
 }
 
 func (m *Machine) Clocktick() error {
@@ -339,6 +390,54 @@ func (m *Machine) Clocktick() error {
 		regx := instr1 & 0xF
 		val := m.Reg_V[regx]
 		m.I += uint16(val)
+
+	/*
+		Keypad instructions
+	*/
+	case (instr1 >> 4 == 0xE) && (instr2 == 0x9E):
+		fmt.Println("Key SKP instruction")
+		reg := instr1 & 0xF
+		keycode := KeyMap[m.Reg_V[reg]]
+		if rl.IsKeyDown(keycode) == true {
+			m.PC += 2
+		}
+		
+	case (instr1 >> 4 == 0xE) && (instr2 == 0xA1):
+		fmt.Println("Key SKNP instruction")
+		reg := instr1 & 0xF
+		keycode := KeyMap[m.Reg_V[reg]]
+		if rl.IsKeyDown(keycode) != true {
+			m.PC += 2
+		}
+	
+	case (instr1 >> 4 == 0xF) && (instr2 == 0x0A):
+		fmt.Println("GetKey instruction")
+		reg := instr1 & 0xF
+		var key int32
+		for key != 0{
+			key = rl.GetKeyPressed()			
+		}
+		
+		ikey := RKeyMap[key]
+		m.Reg_V[reg] = ikey
+
+	/*
+		Timer Instructions
+	*/
+	case (instr1 >> 4 == 0xF) && (instr2 == 0x15):
+		fmt.Println("Set Timer instruction")
+		reg := instr1 & 0xF
+		m.DT = m.Reg_V[reg]
+		
+	case (instr1 >> 4 == 0xF) && (instr2 == 0x07):
+		fmt.Println("Get Timer instruction")
+		reg := instr1 & 0xF
+		m.Reg_V[reg] = m.DT
+
+	case (instr1 >> 4 == 0xF) && (instr2 == 0x18):
+		fmt.Println("Set Sound Timer instruction")
+		reg := instr1 & 0xF
+		m.ST = m.Reg_V[reg]
 
 	default:
 		fmt.Printf("Unknown instruction: %02x:%02x\n", instr1, instr2)
