@@ -29,7 +29,11 @@ func main() {
 
 	for !rl.WindowShouldClose() {
 		err := machine.Clocktick()
-		check(err)
+		// check(err)
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			panic(err)
+		}
 		DisplayUpdate(machine.DisplayBuf)
 		time.Sleep(2 * time.Millisecond)
 	}
