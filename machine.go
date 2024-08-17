@@ -6,6 +6,7 @@ import (
 	"errors"
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"golang.org/x/exp/slog"
+	"math/rand"
 )
 
 type Machine struct {
@@ -450,7 +451,8 @@ func (m *Machine) Clocktick() error {
 		slog.Debug("Get Random byte instruction")
 		vx := instr1 & 0xF
 		n := instr2
-		m.Reg_V[vx] = 0x4F & n
+		rand_byte := rand.Intn(0xFF)
+		m.Reg_V[vx] = uint8(rand_byte) & n
 
 	case instr1 >> 4 == 0xD:
 		slog.Debug("Draw sprite instruction")
