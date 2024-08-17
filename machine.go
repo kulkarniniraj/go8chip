@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"errors"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"golang.org/x/exp/slog"
 )
 
 type Machine struct {
@@ -21,15 +22,15 @@ type Machine struct {
 
 var KeyMap = map[uint8]int32 {
 	0: rl.KeyKp0,
-	1: rl.KeyKp1,
-	2: rl.KeyKp2,
-	3: rl.KeyKp3,
+	1: rl.KeyKp7,
+	2: rl.KeyKp8,
+	3: rl.KeyKp9,
 	4: rl.KeyKp4,
 	5: rl.KeyKp5,
 	6: rl.KeyKp6,
-	7: rl.KeyKp7,
-	8: rl.KeyKp8,
-	9: rl.KeyKp9,
+	7: rl.KeyKp1,
+	8: rl.KeyKp2,
+	9: rl.KeyKp3,
 	0xA: rl.KeyZ,
 	0xB: rl.KeyX,
 	0xC: rl.KeyC,
@@ -40,15 +41,15 @@ var KeyMap = map[uint8]int32 {
 
 var RKeyMap = map[int32]uint8 {
 	rl.KeyKp0: 0,   
-	rl.KeyKp1: 1,   
-	rl.KeyKp2: 2,   
-	rl.KeyKp3: 3,   
+	rl.KeyKp1: 7,   
+	rl.KeyKp2: 8,   
+	rl.KeyKp3: 9,   
 	rl.KeyKp4: 4,   
 	rl.KeyKp5: 5,   
 	rl.KeyKp6: 6,   
-	rl.KeyKp7: 7,   
-	rl.KeyKp8: 8,   
-	rl.KeyKp9: 9,   
+	rl.KeyKp7: 1,   
+	rl.KeyKp8: 2,   
+	rl.KeyKp9: 3,   
 	rl.KeyZ: 0xA,   
 	rl.KeyX: 0xB,   
 	rl.KeyC: 0xC,   
@@ -171,6 +172,7 @@ func (m *Machine) drawSprite(vx uint8, vy uint8, n uint8) {
 
 	var i uint8
 	var j uint8
+	m.Reg_V[15] = 0 
 	for i = 0; i < n; i++ {
 		if y + i > 31 {
 			// below screen
@@ -189,6 +191,9 @@ func (m *Machine) drawSprite(vx uint8, vy uint8, n uint8) {
 			rshift := x + j
 			bit >>= rshift
 			// fmt.Printf("display bitmask: %x\n", bit)
+			if m.DisplayBuf[y + i] & bit != 0{
+				m.Reg_V[15] = 1
+			}
 			m.DisplayBuf[y + i] ^= bit
 		}
 	}
@@ -247,19 +252,19 @@ func (m *Machine) Clocktick() error {
 	
 	instr1, instr2 := m.Mem[m.PC], m.Mem[m.PC + 1]
 
-	fmt.Printf("%04x : ", m.PC)
+	slog.Debug("%04x : ", m.PC)
 
 	switch {		
 	/*
 		Load instructions
 	*/
 	case instr1 >> 4 == 6:
-		fmt.Println("Load immediate instruction")
+		slog.Debug("Load immediate instruction")
 		reg := instr1 & 0xF
 		val := instr2
 		m.Reg_V[reg] = val
 	case instr1 >> 4 == 0xA:
-		fmt.Println("Load index instruction")
+		slog.Debug("Load index instruction")
 		var val uint16
 		val = uint16(instr1) & 0xF
 		val <<= 8
@@ -267,7 +272,7 @@ func (m *Machine) Clocktick() error {
 		m.I = val //+ 0x200
 	
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x29):
-		fmt.Println("Load digit sprite")
+		slog.Debug("Load digit sprite")
 		reg := instr1 & 0xF
 		m.I = uint16(m.Reg_V[reg]) * 5
 		
@@ -275,31 +280,31 @@ func (m *Machine) Clocktick() error {
 		Store instructions
 	*/
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 0):
-		fmt.Println("Store direct instruction")
+		slog.Debug("Store direct instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		m.Reg_V[regx] = m.Reg_V[regy]
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 1):
-		fmt.Println("Store ORed instruction")
+		slog.Debug("Store ORed instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		m.Reg_V[regx] |= m.Reg_V[regy] 
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 2):
-		fmt.Println("Store ANDed instruction")
+		slog.Debug("Store ANDed instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		m.Reg_V[regx] &= m.Reg_V[regy]
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 3):
-		fmt.Println("Store XORed instruction")
+		slog.Debug("Store XORed instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		m.Reg_V[regx] ^= m.Reg_V[regy]
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 4):
-		fmt.Println("Store ADDed instruction")
+		slog.Debug("Store ADDed instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		tmp := uint16(m.Reg_V[regx]) + uint16(m.Reg_V[regy])
@@ -311,7 +316,7 @@ func (m *Machine) Clocktick() error {
 		}
 		
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 5):
-		fmt.Println("Store SUBed instruction")
+		slog.Debug("Store SUBed instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		flag := m.Reg_V[regx] >= m.Reg_V[regy]
@@ -321,10 +326,10 @@ func (m *Machine) Clocktick() error {
 		} else {
 			m.Reg_V[15] = 0
 		}
-		fmt.Println(m.Reg_V)
+		slog.Debug("Register file", m.Reg_V)
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 6):
-		fmt.Println("Store Right shift instruction")
+		slog.Debug("Store Right shift instruction")
 		regx := instr1 & 0xF
 		// regy := instr2 >> 4
 		flag := m.Reg_V[regx] % 2
@@ -332,7 +337,7 @@ func (m *Machine) Clocktick() error {
 		m.Reg_V[15] = flag
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 7):
-		fmt.Println("Store SUBN instruction")
+		slog.Debug("Store SUBN instruction")
 		regx := instr1 & 0xF
 		regy := instr2 >> 4
 		y, x := m.Reg_V[regy], m.Reg_V[regx]
@@ -345,7 +350,7 @@ func (m *Machine) Clocktick() error {
 
 
 	case (instr1 >> 4 == 0x8) && (instr2 & 0xF == 0xE):
-		fmt.Println("Store Left shift instruction")
+		slog.Debug("Store Left shift instruction")
 		regx := instr1 & 0xF
 		// regy := instr2 >> 4
 		flag := m.Reg_V[regx] >> 7
@@ -359,7 +364,7 @@ func (m *Machine) Clocktick() error {
 		reg := instr1 & 0xF
 		val := instr2
 		m.Reg_V[reg] += val
-		fmt.Println("Add immediate instruction")
+		slog.Debug("Add immediate instruction")
 
 	/*
 		Jumps
@@ -369,7 +374,7 @@ func (m *Machine) Clocktick() error {
 		addr := uint16(instr2)
 		addr2 := (uint16(instr1) & 0xF) << 8
 		addr |= addr2
-		fmt.Println("Jump instruction")
+		slog.Debug("Jump instruction")
 		// fmt.Printf("Jmp address: %x:%x => %04x\n", addr2, instr2, addr)
 		m.PC = addr
 		return nil
@@ -384,7 +389,7 @@ func (m *Machine) Clocktick() error {
 		if m.Reg_V[reg] == val {
 			m.PC += 2
 		}
-		fmt.Println("Skip if equal imm")
+		slog.Debug("Skip if equal imm")
 
 	case instr1 >> 4 == 0x4:
 		reg := instr1 & 0xF
@@ -392,7 +397,7 @@ func (m *Machine) Clocktick() error {
 		if m.Reg_V[reg] != val {
 			m.PC += 2
 		}
-		fmt.Println("Skip if not equal imm")
+		slog.Debug("Skip if not equal imm")
 
 	case instr1 >> 4 == 0x5:
 		reg1 := instr1 & 0xF
@@ -400,7 +405,7 @@ func (m *Machine) Clocktick() error {
 		if m.Reg_V[reg1] == m.Reg_V[reg2] {
 			m.PC += 2
 		}
-		fmt.Println("Skip if equal")
+		slog.Debug("Skip if equal")
 
 	case instr1 >> 4 == 0x9:
 		reg1 := instr1 & 0xF
@@ -408,7 +413,7 @@ func (m *Machine) Clocktick() error {
 		if m.Reg_V[reg1] != m.Reg_V[reg2] {
 			m.PC += 2
 		}
-		fmt.Println("Skip if equal")
+		slog.Debug("Skip if equal")
 
 	/* 
 		Subroutine
@@ -421,12 +426,12 @@ func (m *Machine) Clocktick() error {
 		m.Stack[m.SP] = m.PC
 		m.SP += 1
 		m.PC = addr
-		fmt.Println("Subroutine call")
-		fmt.Printf("sp: %x addr: %x, return: %x\n", m.SP, m.PC, m.Stack[m.SP - 1])
+		slog.Debug("Subroutine call")
+		slog.Debug("sp: %x addr: %x, return: %x\n", m.SP, m.PC, m.Stack[m.SP - 1])
 		return nil
 
 	case instr1 == 0 && instr2 == 0xEE:
-		fmt.Println("Subroutine return")
+		slog.Debug("Subroutine return")
 		
 		m.SP -= 1
 		ret_addr := m.Stack[m.SP]
@@ -438,17 +443,17 @@ func (m *Machine) Clocktick() error {
 		Special instructions
 	*/
 	case instr1 == 0 && instr2 == 0xE0:
-		fmt.Println("Clear screen instruction")
+		slog.Debug("Clear screen instruction")
 		m.clearDisplay()
 
 	case instr1 >> 4 == 0xC:
-		fmt.Println("Get Random byte instruction")
+		slog.Debug("Get Random byte instruction")
 		vx := instr1 & 0xF
 		n := instr2
 		m.Reg_V[vx] = 0x4F & n
 
 	case instr1 >> 4 == 0xD:
-		fmt.Println("Draw sprite instruction")
+		slog.Debug("Draw sprite instruction")
 		
 		vx := instr1 & 0xF
 		vy := (instr2 & 0xF0) >> 4
@@ -458,7 +463,7 @@ func (m *Machine) Clocktick() error {
 		m.drawSprite(vx, vy, n)
 
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x65):
-		fmt.Println("Load regs from memory instruction")
+		slog.Debug("Load regs from memory instruction")
 		
 		x := uint8(instr1) & 0xF
 		var i uint8
@@ -467,7 +472,7 @@ func (m *Machine) Clocktick() error {
 		}
 		
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x55):
-		fmt.Println("Store regs to memory instruction")
+		slog.Debug("Store regs to memory instruction")
 		
 		x := uint8(instr1) & 0xF
 		var i uint8
@@ -476,7 +481,7 @@ func (m *Machine) Clocktick() error {
 		}
 	
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x33):
-		fmt.Println("Store BCD of Vx to memory instruction")
+		slog.Debug("Store BCD of Vx to memory instruction")
 		
 		regx := instr1 & 0xF
 		val := m.Reg_V[regx]
@@ -486,7 +491,7 @@ func (m *Machine) Clocktick() error {
 		m.Mem[m.I+2] = o
 
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x1E):
-		fmt.Println("Add Vx to I instruction")
+		slog.Debug("Add Vx to I instruction")
 		regx := instr1 & 0xF
 		val := m.Reg_V[regx]
 		m.I += uint16(val)
@@ -495,7 +500,7 @@ func (m *Machine) Clocktick() error {
 		Keypad instructions
 	*/
 	case (instr1 >> 4 == 0xE) && (instr2 == 0x9E):
-		fmt.Println("Key SKP instruction")
+		slog.Debug("Key SKP instruction")
 		reg := instr1 & 0xF
 		keycode := KeyMap[m.Reg_V[reg]]
 		if rl.IsKeyDown(keycode) == true {
@@ -503,7 +508,7 @@ func (m *Machine) Clocktick() error {
 		}
 		
 	case (instr1 >> 4 == 0xE) && (instr2 == 0xA1):
-		fmt.Println("Key SKNP instruction")
+		slog.Debug("Key SKNP instruction")
 		reg := instr1 & 0xF
 		keycode := KeyMap[m.Reg_V[reg]]
 		if rl.IsKeyDown(keycode) != true {
@@ -511,7 +516,7 @@ func (m *Machine) Clocktick() error {
 		}
 	
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x0A):
-		fmt.Println("GetKey instruction")
+		slog.Debug("GetKey instruction")
 		reg := instr1 & 0xF
 		var key int32
 		for key != 0{
@@ -525,17 +530,17 @@ func (m *Machine) Clocktick() error {
 		Timer Instructions
 	*/
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x15):
-		fmt.Println("Set Timer instruction")
+		slog.Debug("Set Timer instruction")
 		reg := instr1 & 0xF
 		m.DT = m.Reg_V[reg]
 		
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x07):
-		fmt.Println("Get Timer instruction")
+		slog.Debug("Get Timer instruction")
 		reg := instr1 & 0xF
 		m.Reg_V[reg] = m.DT
 
 	case (instr1 >> 4 == 0xF) && (instr2 == 0x18):
-		fmt.Println("Set Sound Timer instruction")
+		slog.Debug("Set Sound Timer instruction")
 		reg := instr1 & 0xF
 		m.ST = m.Reg_V[reg]
 
