@@ -159,6 +159,8 @@ func (m *Machine) Init(rom_path string) {
 	}
 }
 
+
+
 func (m *Machine) clearDisplay() {
 	for i := 0; i < len(m.DisplayBuf); i++ {
 		m.DisplayBuf[i] = 0;
@@ -245,6 +247,10 @@ func (m *Machine) TimerUpdate() {
 
 	if m.ST > 0 {
 		m.ST--
+		AudioUpdate()
+		if m.ST <= 0 {
+			AudioStop()
+		}
 	}
 }
 
@@ -545,6 +551,8 @@ func (m *Machine) Clocktick() error {
 		slog.Debug("Set Sound Timer instruction")
 		reg := instr1 & 0xF
 		m.ST = m.Reg_V[reg]
+		AudioPlay()
+		fmt.Println("Set Sound Timer instruction", m.Reg_V[reg])
 
 	default:
 		fmt.Printf("Unknown instruction: %02x:%02x\n", instr1, instr2)

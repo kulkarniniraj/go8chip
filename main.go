@@ -47,6 +47,9 @@ func main() {
 	DisplayInit()
 	defer DisplayDeinit()
 
+	AudioInit()
+	defer AudioDeinit()
+
 	go machineThread(&machine)
 
 	for !rl.WindowShouldClose() {
